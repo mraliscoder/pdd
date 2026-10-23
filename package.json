@@ -1,0 +1,12 @@
+{
+  "name": "pdd-practice",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node scripts/serve.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "import": "node scripts/import-data.mjs"
+  },
+  "devDependencies": { "cheerio": "1.1.2" }
+}

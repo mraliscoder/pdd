@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#194bcd">
+  <meta name="description" content="Читайте ПДД России с изображениями знаков. Решайте билеты AB и CD, тренируйтесь по темам и повторяйте ошибки.">
+  <title>ПДД · Практика — правила и билеты</title>
+  <link rel="icon" href="icon.svg" type="image/svg+xml"><link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <a class="skip" href="#main">К содержанию</a>
+  <aside class="sidebar">
+    <a class="brand" href="#home"><span class="brand-icon" aria-hidden="true">↟</span><span>ПДД<span class="brand-sub">Практика</span></span></a>
+    <p class="nav-label">Ваш маршрут к экзамену</p>
+    <nav aria-label="Основная навигация">
+      <a href="#home" data-nav="home"><span aria-hidden="true">⌂</span>Моя подготовка</a>
+      <a href="#rules" data-nav="rules"><span aria-hidden="true">▤</span>Правила дорожного движения</a>
+      <a href="#signs" data-nav="signs"><span aria-hidden="true">△</span>Знаки и разметка</a>
+      <a href="#tickets" data-nav="tickets"><span aria-hidden="true">▦</span>Экзаменационные билеты</a>
+      <a href="#topics" data-nav="topics"><span aria-hidden="true">☷</span>Тренировка по темам</a>
+      <a href="#practice" data-nav="practice"><span aria-hidden="true">◷</span>Тесты и экзамен</a>
+      <a href="#saved" data-nav="saved"><span aria-hidden="true">☆</span>Ошибки и избранное <b id="error-count"></b></a>
+    </nav>
+    <div class="sidebar-bottom"><span class="little-road" aria-hidden="true"></span><p>Понимать правила.<br>Уверенно ехать.</p><a href="#sources">Источники и данные</a></div>
+  </aside>
+  <div class="workspace">
+    <header class="topbar"><button class="menu-button" id="menu" aria-label="Открыть меню" aria-expanded="false">☰</button><span id="breadcrumb">Моя подготовка</span><div class="top-actions"><span class="local-label">Прогресс на этом устройстве</span><label class="category-label">Категория <select id="category" aria-label="Категория водительского удостоверения"><option value="A_B">A, B</option><option value="C_D">C, D</option></select></label></div></header>
+    <main id="main" tabindex="-1"><div class="loading">Загружаем правила и билеты…</div></main>
+    <footer>ПДД · Практика <span>Учитесь в своём темпе</span><a href="#sources">О базе вопросов</a></footer>
+  </div>
+  <dialog id="sign-dialog"><button class="close-dialog" aria-label="Закрыть">×</button><div id="sign-detail"></div></dialog>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <script type="module" src="app.js"></script>
+</body></html>
