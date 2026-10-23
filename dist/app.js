@@ -128,6 +128,11 @@ function render() {
   if (route === 'session' && session) state.category = session.category;
   const pages = { home, rules: () => rules(id), signs, tickets, topics, practice, saved: savedPage, sources, session: sessionPage };
   $('#main').innerHTML = (pages[route] || home)();
+  document.querySelectorAll('.question-figure').forEach(figure => {
+    figure.setAttribute('role', 'button'); figure.tabIndex = 0;
+    figure.setAttribute('aria-label', 'Увеличить дорожную ситуацию');
+    figure.insertAdjacentHTML('beforeend', '<span class="zoom-hint">⊕ Увеличить</span>');
+  });
   document.querySelectorAll('[data-nav]').forEach(a => a.classList.toggle('active', a.dataset.nav === route));
   $('#breadcrumb').textContent = ({ home: 'Моя подготовка', rules: 'Учебник ПДД', signs: 'Знаки и разметка', tickets: 'Билеты', topics: 'Темы', practice: 'Тесты и экзамен', saved: 'Повторение', session: 'Тренировка', sources: 'Источники' })[route] || 'Моя подготовка';
   $('#category').value = state.category; $('#category').disabled = route === 'session' && session && !session.finished;
@@ -137,11 +142,19 @@ function render() {
 }
 function updateTimer() { if ($('#timer') && session?.deadline) { const seconds = Math.max(0, Math.ceil((session.deadline - Date.now()) / 1000)); $('#timer').textContent = `${Math.floor(seconds / 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`; } }
 function showSign(s, marking = false) {
+  $('#sign-dialog').classList.remove('image-viewer');
   const official = !marking ? data.rules.filter(c => c.kind === 'signs').flatMap(c => c.blocks.map(b => ({ ...b, chapter: c.id }))).find(b => new RegExp(`^${s.number.replaceAll('.', '\\.')}[\\s,]`).test(b.text)) : null;
   $('#sign-detail').innerHTML = `<img src="${s.image}" alt="${escape(s.title || s.description)}"><span class="sign-number">${s.number}</span><h2>${escape(s.title || s.group)}</h2><p>${escape(official?.text || s.description || 'Условия применения приведены в приложении к ПДД.')}</p><a class="btn primary" href="#rules/${official?.chapter || (marking ? '35' : '27')}">Открыть приложение ПДД</a>`;
   $('#sign-dialog').showModal();
 }
+function showQuestionImage(figure) {
+  const img = figure.querySelector('img');
+  $('#sign-dialog').classList.add('image-viewer');
+  $('#sign-detail').innerHTML = `<h2>Дорожная ситуация</h2><p>Прокрутите изображение в сторону, чтобы рассмотреть детали.</p><div class="image-pan"><img src="${escape(img.getAttribute('src'))}" alt="${escape(img.alt)}"></div>`;
+  $('#sign-dialog').showModal();
+}
 document.addEventListener('click', e => {
+  const figure = e.target.closest('.question-figure'); if (figure) { showQuestionImage(figure); return; }
   const sign = e.target.closest('[data-sign]'); if (sign) { showSign(data.signMap[sign.dataset.sign]); return; }
   const mark = e.target.closest('[data-marking]'); if (mark) { showSign(data.markings.find(m => m.number === mark.dataset.marking && m.group === mark.dataset.group), true); return; }
   const el = e.target.closest('[data-action]'); if (!el) return;
@@ -179,7 +192,7 @@ document.addEventListener('submit', e => {
   qs = shuffle(qs); if (count !== 'all') qs = qs.slice(0, Number(count));
   start(qs, $('#practice-mode').value, count === 'all' ? `Марафон · вопросов: ${qs.length}` : `Тренировочный тест · вопросов: ${qs.length}`);
 });
-document.addEventListener('keydown', e => { if (/INPUT|TEXTAREA|SELECT/.test(e.target.tagName) || $('#sign-dialog').open || location.hash !== '#session' || !session || session.finished) return; if (/^[1-5]$/.test(e.key)) answer(Number(e.key) - 1); if (e.key === 'ArrowRight') next(); });
+document.addEventListener('keydown', e => { if (e.target.matches('.question-figure') && ['Enter', ' '].includes(e.key)) { e.preventDefault(); showQuestionImage(e.target); return; } if (/INPUT|TEXTAREA|SELECT/.test(e.target.tagName) || $('#sign-dialog').open || location.hash !== '#session' || !session || session.finished) return; if (/^[1-5]$/.test(e.key)) answer(Number(e.key) - 1); if (e.key === 'ArrowRight') next(); });
 $('#menu').addEventListener('click', () => { const open = document.body.classList.toggle('menu-open'); $('#menu').setAttribute('aria-expanded', String(open)); });
 $('.close-dialog').addEventListener('click', () => $('#sign-dialog').close());
 $('#sign-dialog').addEventListener('click', e => { if (e.target === $('#sign-dialog')) $('#sign-dialog').close(); });
