@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import * as cheerio from 'cheerio';
+import { extractRuleReferences } from './rule-references.mjs';
 
 const root = path.resolve(import.meta.dirname, '..');
 const output = path.join(root, 'dist');
@@ -34,6 +35,9 @@ const signsSnapshot = '721d017cb9553820f9cd2bf268cc135cb8501adb';
 const sourceSigns = JSON.parse((await download(`https://raw.githubusercontent.com/etspring/pdd_russia/${signsSnapshot}/signs/signs.json`)).toString());
 const signs = Object.entries(sourceSigns).flatMap(([group, entries]) => Object.values(entries).map(s => ({ ...s, group, image: s.image.replace('./', '') })));
 const signByNumber = Object.fromEntries(signs.map(s => [s.number, s]));
+const markup = JSON.parse(await fs.readFile(path.join(repo, 'markup/markup.json'), 'utf8'));
+const markings = Object.entries(markup).flatMap(([group, entries]) => Object.values(entries).map(s => ({ ...s, group, image: s.image.replace('./', '') })));
+const referenceChapters = links.map((link, i) => ({ title: link.title, source: link.url, kind: i < 26 ? 'rules' : i < 34 ? 'signs' : i < 36 ? 'markings' : 'vehicle' }));
 const chapters = [];
 let imageNo = 0;
 for (let i = 0; i < links.length; i++) {
@@ -63,7 +67,8 @@ for (let i = 0; i < links.length; i++) {
       }
     });
     if (i >= 26 && i < 34) for (const number of text.match(/\d+\.\d+(?:\.\d+)?/g) || []) if (signByNumber[number]) refs.push(number);
-    blocks.push({ text, images: imgs, signs: [...new Set(refs)] });
+    const { references } = extractRuleReferences(el, referenceChapters[i], referenceChapters, signs, markings);
+    blocks.push({ text, images: imgs, signs: [...new Set(refs)], references });
   }
   if (blocks.length < 2) throw Error(`Empty chapter: ${link.title}`);
   chapters.push({ id: String(i + 1), number: i < 26 ? i + 1 : null, kind: i < 26 ? 'rules' : i < 34 ? 'signs' : i < 36 ? 'markings' : 'vehicle', title: link.title, source: link.url, blocks });
@@ -81,8 +86,6 @@ for (const category of ['A_B', 'C_D']) {
   }
 }
 questions.sort((a, b) => a.category.localeCompare(b.category) || a.ticket - b.ticket || a.number - b.number);
-const markup = JSON.parse(await fs.readFile(path.join(repo, 'markup/markup.json'), 'utf8'));
-const markings = Object.entries(markup).flatMap(([group, entries]) => Object.values(entries).map(s => ({ ...s, group, image: s.image.replace('./', '') })));
 for (const image of new Set([...questions, ...signs, ...markings].map(v => v.image).filter(Boolean))) {
   await fs.mkdir(path.dirname(path.join(output, image)), { recursive: true });
   try { await fs.copyFile(path.join(repo, image), path.join(output, image)); }

@@ -20,6 +20,22 @@ function title(h, p = '', extra = '') { return `<div class="page-title"><div><h1
 function button(text, action, cls = '', attrs = '') { return `<button class="btn ${cls}" data-action="${action}" ${attrs}>${text}</button>`; }
 function signImage(s, cls = '') { return `<img class="${cls}" src="${escape(s.image)}" alt="Знак ${escape(s.number)}: ${escape(s.title)}" loading="lazy">`; }
 function refText(block) {
+  if (block.references) {
+    let html = '', offset = 0;
+    for (const ref of block.references) {
+      html += escape(block.text.slice(offset, ref.start));
+      const text = escape(block.text.slice(ref.start, ref.end));
+      if (ref.kind === 'marking') {
+        const marking = data.markings.find(m => m.number === ref.assetNumber && m.group === ref.group);
+        html += marking ? `<button class="inline-sign inline-marking" data-marking="${escape(marking.number)}" data-group="${escape(marking.group)}" aria-label="Разметка ${escape(ref.number)}: увеличить">${text}<img src="${escape(marking.image)}" alt="" loading="lazy"></button>` : text;
+      } else {
+        const sign = data.signMap[ref.number];
+        html += sign ? `<button class="inline-sign" data-sign="${escape(ref.number)}">${text}${signImage(sign)}</button>` : text;
+      }
+      offset = ref.end;
+    }
+    return html + escape(block.text.slice(offset));
+  }
   const parts = block.text.split(/(\d+\.\d+(?:\.\d+)?)/g);
   return parts.map(t => block.signs.includes(t) && data.signMap[t] ? `<button class="inline-sign" data-sign="${t}">${escape(t)}${signImage(data.signMap[t])}</button>` : escape(t)).join('');
 }
@@ -143,17 +159,23 @@ function render() {
 function updateTimer() { if ($('#timer') && session?.deadline) { const seconds = Math.max(0, Math.ceil((session.deadline - Date.now()) / 1000)); $('#timer').textContent = `${Math.floor(seconds / 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`; } }
 function showSign(s, marking = false) {
   $('#sign-dialog').classList.remove('image-viewer');
-  const official = !marking ? data.rules.filter(c => c.kind === 'signs').flatMap(c => c.blocks.map(b => ({ ...b, chapter: c.id }))).find(b => new RegExp(`^${s.number.replaceAll('.', '\\.')}[\\s,]`).test(b.text)) : null;
-  $('#sign-detail').innerHTML = `<img src="${s.image}" alt="${escape(s.title || s.description)}"><span class="sign-number">${s.number}</span><h2>${escape(s.title || s.group)}</h2><p>${escape(official?.text || s.description || 'Условия применения приведены в приложении к ПДД.')}</p><a class="btn primary" href="#rules/${official?.chapter || (marking ? '35' : '27')}">Открыть приложение ПДД</a>`;
+  $('#sign-dialog').classList.toggle('marking-viewer', marking);
+  const appendix = data.rules.filter(c => c.kind === (marking ? 'markings' : 'signs') && (!marking || cleanTitle(c.title) === s.group));
+  const grouped = marking && /^2\.1(?:\.[123])?$/.test(s.number);
+  const number = grouped ? '2.1.1' : s.number;
+  const official = appendix.flatMap(c => c.blocks.map(b => ({ ...b, chapter: c.id }))).find(b => new RegExp(`^${number.replaceAll('.', '\\.')}[\\s,]`).test(b.text));
+  $('#sign-detail').innerHTML = `<img src="${s.image}" alt="${escape(marking ? `Разметка ${grouped ? '2.1.1–2.1.3' : s.number}` : s.title)}"><span class="sign-number">${grouped ? '2.1.1–2.1.3' : s.number}</span><h2>${escape(s.title || s.group)}</h2><p>${escape(official?.text || s.description || 'Условия применения приведены в приложении к ПДД.')}</p><a class="btn primary" href="#rules/${official?.chapter || appendix[0]?.id || '27'}">Открыть приложение ПДД</a>`;
   $('#sign-dialog').showModal();
 }
 function showQuestionImage(figure) {
   const img = figure.querySelector('img');
+  $('#sign-dialog').classList.remove('marking-viewer');
   $('#sign-dialog').classList.add('image-viewer');
   $('#sign-detail').innerHTML = `<h2>Дорожная ситуация</h2><p>Прокрутите изображение в сторону, чтобы рассмотреть детали.</p><div class="image-pan"><img src="${escape(img.getAttribute('src'))}" alt="${escape(img.alt)}"></div>`;
   $('#sign-dialog').showModal();
 }
 document.addEventListener('click', e => {
+  if (e.target.closest('#sign-dialog a[href^="#"]')) $('#sign-dialog').close();
   const figure = e.target.closest('.question-figure'); if (figure) { showQuestionImage(figure); return; }
   const sign = e.target.closest('[data-sign]'); if (sign) { showSign(data.signMap[sign.dataset.sign]); return; }
   const mark = e.target.closest('[data-marking]'); if (mark) { showSign(data.markings.find(m => m.number === mark.dataset.marking && m.group === mark.dataset.group), true); return; }
